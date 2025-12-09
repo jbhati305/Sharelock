@@ -1,0 +1,7 @@
+For the company's financial statement we have to build our own tool
+which will get income/balance/cashflow and other financial details about 
+the company for the years(like 10 year data)
+
+For that we can make our own scrapper, can use nsepython, 
+we have to research for the available tools in that aspect if there are 
+any.
