@@ -1,80 +1,96 @@
 """
-Tool: get_trade_info
+Tool: get_holders_info
 
-Fetches trade info including delivery data for NSE listed companies.
-Delivery percentage is a key metric for Indian market analysis.
+Fetches institutional and insider holdings using yfinance.
 """
 
-from nsepython import nsefetch
+import yfinance as yf
 
 
-def get_trade_info(symbol: str) -> dict:
+def get_holders_info(ticker: str) -> dict:
     """
-    Get trade info and delivery data for an NSE listed company.
+    Get institutional holders and insider holdings for a stock.
 
     Args:
-        symbol: NSE stock symbol (e.g., 'RELIANCE', 'TCS', 'INFY', 'HDFCBANK')
+        ticker: Stock ticker symbol
+                - US stocks: 'AAPL', 'GOOGL', 'MSFT'
+                - Indian NSE stocks: 'RELIANCE.NS', 'TCS.NS', 'INFY.NS'
 
     Returns:
         Dictionary containing:
-        - symbol: Stock symbol
-        - quantity_traded: Total quantity traded
-        - delivery_quantity: Delivery quantity
-        - delivery_percentage: Delivery to traded percentage (higher = more long-term buying)
-        - total_traded_volume: Total traded volume in lakhs
-        - total_traded_value: Total traded value in crores
-        - market_cap: Total market cap in crores
-        - free_float_market_cap: Free float market cap in crores
-        - impact_cost: Impact cost
-        - volatility: Daily and annual volatility
+        - institutional_holders: List of major institutional holders
+        - major_holders: Breakdown of holder types
+        - insider_holdings: Insider transaction data (if available)
     """
     try:
-        # Fetch trade info
-        url = f"https://www.nseindia.com/api/quote-equity?symbol={symbol.upper()}&section=trade_info"
-        data = nsefetch(url)
-
-        if not data:
-            return {
-                "error": f"No trade info found for symbol '{symbol}'.",
-                "symbol": symbol.upper(),
-            }
-
-        # Extract data
-        security_dp = data.get("securityWiseDP", {})
-        market_depth = data.get("marketDeptOrderBook", {})
-        trade_info = market_depth.get("tradeInfo", {})
-        var_info = market_depth.get("valueAtRisk", {})
+        stock = yf.Ticker(ticker)
+        
+        # Get major holders breakdown
+        major_holders = {}
+        try:
+            major_holders_df = stock.major_holders
+            if major_holders_df is not None and not major_holders_df.empty and len(major_holders_df.columns) >= 2:
+                for idx in range(len(major_holders_df)):
+                    try:
+                        value = major_holders_df.iloc[idx, 0]
+                        label = major_holders_df.iloc[idx, 1]
+                        major_holders[str(label)] = value
+                    except (IndexError, KeyError):
+                        continue
+        except Exception:
+            pass
+        
+        # Get institutional holders
+        institutional_holders = []
+        try:
+            inst_holders_df = stock.institutional_holders
+            if inst_holders_df is not None and not inst_holders_df.empty:
+                for idx in range(min(10, len(inst_holders_df))):
+                    try:
+                        row = inst_holders_df.iloc[idx]
+                        institutional_holders.append({
+                            "holder": row.get("Holder") if hasattr(row, 'get') else row["Holder"] if "Holder" in row.index else None,
+                            "shares": int(row.get("Shares", 0) or row["Shares"]) if "Shares" in row.index else None,
+                            "date_reported": str(row.get("Date Reported", "")) if "Date Reported" in row.index else None,
+                            "percent_out": row.get("% Out") if "% Out" in row.index else None,
+                            "value": row.get("Value") if "Value" in row.index else None,
+                        })
+                    except (IndexError, KeyError, TypeError):
+                        continue
+        except Exception:
+            pass
+        
+        # Get mutual fund holders
+        mutualfund_holders = []
+        try:
+            mf_holders_df = stock.mutualfund_holders
+            if mf_holders_df is not None and not mf_holders_df.empty:
+                for idx in range(min(10, len(mf_holders_df))):
+                    try:
+                        row = mf_holders_df.iloc[idx]
+                        mutualfund_holders.append({
+                            "holder": row.get("Holder") if hasattr(row, 'get') else row["Holder"] if "Holder" in row.index else None,
+                            "shares": int(row.get("Shares", 0) or row["Shares"]) if "Shares" in row.index else None,
+                            "date_reported": str(row.get("Date Reported", "")) if "Date Reported" in row.index else None,
+                            "percent_out": row.get("% Out") if "% Out" in row.index else None,
+                            "value": row.get("Value") if "Value" in row.index else None,
+                        })
+                    except (IndexError, KeyError, TypeError):
+                        continue
+        except Exception:
+            pass
 
         return {
-            "symbol": symbol.upper(),
-            # Delivery data
-            "quantity_traded": security_dp.get("quantityTraded"),
-            "delivery_quantity": security_dp.get("deliveryQuantity"),
-            "delivery_percentage": security_dp.get("deliveryToTradedQuantity"),
-            "delivery_date": security_dp.get("secWiseDelPosDate"),
-            # Volume data (in lakhs/crores)
-            "total_traded_volume": trade_info.get("totalTradedVolume"),
-            "total_traded_value": trade_info.get("totalTradedValue"),
-            # Market cap (in crores)
-            "total_market_cap": trade_info.get("totalMarketCap"),
-            "free_float_market_cap": trade_info.get("ffmc"),
-            # Risk metrics
-            "impact_cost": trade_info.get("impactCost"),
-            "daily_volatility": trade_info.get("cmDailyVolatility"),
-            "annual_volatility": trade_info.get("cmAnnualVolatility"),
-            # VAR margins
-            "security_var": var_info.get("securityVar"),
-            "var_margin": var_info.get("varMargin"),
-            "extreme_loss_margin": var_info.get("extremeLossMargin"),
-            "applicable_margin": var_info.get("applicableMargin"),
-            # Order book summary
-            "total_buy_quantity": market_depth.get("totalBuyQuantity"),
-            "total_sell_quantity": market_depth.get("totalSellQuantity"),
-            "exchange": "NSE",
+            "ticker": ticker.upper(),
+            "major_holders": major_holders if major_holders else "Data not available for this stock",
+            "institutional_holders": institutional_holders if institutional_holders else "Data not available for this stock",
+            "mutualfund_holders": mutualfund_holders if mutualfund_holders else "Data not available for this stock",
+            "institutional_count": len(institutional_holders),
+            "mutualfund_count": len(mutualfund_holders),
         }
 
     except Exception as e:
         return {
-            "error": f"Failed to fetch trade info for '{symbol}': {str(e)}",
-            "symbol": symbol.upper(),
+            "error": f"Failed to fetch holders info for '{ticker}': {str(e)}",
+            "ticker": ticker.upper(),
         }

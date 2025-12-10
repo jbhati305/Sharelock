@@ -7,11 +7,12 @@ requires-python = ">=3.13"
 dependencies = [
     "mcp[cli]>=1.0.0",
     "yfinance>=0.2.0",
-    "nsepython>=2.0",
+    "ollama>=0.4.0",
 ]
 
 [project.scripts]
 sharelock-mcp = "src.mcp_server.server:main"
+sharelock-agent = "src.agents.stock_agent:main"
 
 [build-system]
 requires = ["hatchling"]

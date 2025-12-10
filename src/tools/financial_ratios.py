@@ -1,78 +1,93 @@
 """
 Tool: get_financial_ratios
 
-Fetches key financial ratios for NSE listed companies.
+Fetches key financial ratios using yfinance.
+Supports both global and Indian markets.
 """
 
-from nsepython import nsefetch
+import yfinance as yf
 
 
-def get_financial_ratios(symbol: str) -> dict:
+def get_financial_ratios(ticker: str) -> dict:
     """
-    Get key financial ratios for an NSE listed company.
+    Get key financial ratios for a stock.
 
     Args:
-        symbol: NSE stock symbol (e.g., 'RELIANCE', 'TCS', 'INFY', 'HDFCBANK')
+        ticker: Stock ticker symbol
+                - US stocks: 'AAPL', 'GOOGL', 'MSFT'
+                - Indian NSE stocks: 'RELIANCE.NS', 'TCS.NS', 'INFY.NS'
 
     Returns:
         Dictionary containing:
-        - symbol: Stock symbol
-        - company_name: Company name
-        - industry: Industry classification
-        - pe_ratio: Price to Earnings ratio
-        - sector_pe: Sector average PE
-        - last_price: Last traded price
-        - market_cap: Market capitalization
-        - face_value: Face value
-        - indices: List of indices the stock belongs to
+        - Valuation: PE ratio, Forward PE, PEG, Price to Book, Price to Sales
+        - Profitability: Profit margins, Operating margins, ROE, ROA
+        - Growth: Revenue growth, Earnings growth
+        - Dividends: Dividend rate, Dividend yield, Payout ratio
+        - Debt: Debt to equity, Current ratio, Quick ratio
     """
     try:
-        # Fetch quote data
-        url = f"https://www.nseindia.com/api/quote-equity?symbol={symbol.upper()}"
-        quote = nsefetch(url)
+        stock = yf.Ticker(ticker)
+        info = stock.info
 
-        if not quote:
+        if not info or info.get("quoteType") == "NONE":
             return {
-                "error": f"No data found for symbol '{symbol}'. Make sure it's a valid NSE symbol.",
-                "symbol": symbol.upper(),
+                "error": f"No data found for ticker '{ticker}'. Check the symbol.",
+                "ticker": ticker.upper(),
             }
 
-        info = quote.get("info", {})
-        metadata = quote.get("metadata", {})
-        price_info = quote.get("priceInfo", {})
-        security_info = quote.get("securityInfo", {})
-        industry_info = quote.get("industryInfo", {})
-
         return {
-            "symbol": info.get("symbol", symbol.upper()),
-            "company_name": info.get("companyName"),
+            "ticker": ticker.upper(),
+            "name": info.get("shortName") or info.get("longName"),
+            "sector": info.get("sector"),
             "industry": info.get("industry"),
-            # Price data
-            "last_price": price_info.get("lastPrice"),
-            "previous_close": price_info.get("previousClose"),
-            "change": price_info.get("change"),
-            "percent_change": price_info.get("pChange"),
-            # Valuation ratios
-            "pe_ratio": metadata.get("pdSymbolPe"),
-            "sector_pe": metadata.get("pdSectorPe"),
-            "sector_index": metadata.get("pdSectorInd"),
-            # Security info
-            "face_value": security_info.get("faceValue"),
-            "market_cap": security_info.get("marketCap"),
-            "issued_size": security_info.get("issuedSize"),
-            # Industry classification
-            "basic_industry": industry_info.get("basicIndustry"),
-            "macro_sector": industry_info.get("macro"),
-            "sector": industry_info.get("sector"),
-            # Index membership
-            "indices": metadata.get("pdSectorIndAll", []),
-            "is_fno": info.get("isFNOSec", False),
-            "currency": "INR",
-            "exchange": "NSE",
+            "currency": info.get("currency"),
+            # Valuation Ratios
+            "pe_ratio": info.get("trailingPE"),
+            "forward_pe": info.get("forwardPE"),
+            "peg_ratio": info.get("pegRatio"),
+            "price_to_book": info.get("priceToBook"),
+            "price_to_sales": info.get("priceToSalesTrailing12Months"),
+            "enterprise_value": info.get("enterpriseValue"),
+            "ev_to_revenue": info.get("enterpriseToRevenue"),
+            "ev_to_ebitda": info.get("enterpriseToEbitda"),
+            # Profitability
+            "profit_margin": info.get("profitMargins"),
+            "operating_margin": info.get("operatingMargins"),
+            "gross_margin": info.get("grossMargins"),
+            "ebitda_margin": info.get("ebitdaMargins"),
+            "return_on_equity": info.get("returnOnEquity"),
+            "return_on_assets": info.get("returnOnAssets"),
+            # Growth
+            "revenue_growth": info.get("revenueGrowth"),
+            "earnings_growth": info.get("earningsGrowth"),
+            "earnings_quarterly_growth": info.get("earningsQuarterlyGrowth"),
+            # Per Share Data
+            "eps_trailing": info.get("trailingEps"),
+            "eps_forward": info.get("forwardEps"),
+            "book_value": info.get("bookValue"),
+            "revenue_per_share": info.get("revenuePerShare"),
+            # Dividends
+            "dividend_rate": info.get("dividendRate"),
+            "dividend_yield": info.get("dividendYield"),
+            "payout_ratio": info.get("payoutRatio"),
+            "five_year_avg_dividend_yield": info.get("fiveYearAvgDividendYield"),
+            # Debt & Liquidity
+            "debt_to_equity": info.get("debtToEquity"),
+            "current_ratio": info.get("currentRatio"),
+            "quick_ratio": info.get("quickRatio"),
+            "total_debt": info.get("totalDebt"),
+            "total_cash": info.get("totalCash"),
+            # Market Data
+            "market_cap": info.get("marketCap"),
+            "beta": info.get("beta"),
+            "fifty_two_week_high": info.get("fiftyTwoWeekHigh"),
+            "fifty_two_week_low": info.get("fiftyTwoWeekLow"),
+            "fifty_day_average": info.get("fiftyDayAverage"),
+            "two_hundred_day_average": info.get("twoHundredDayAverage"),
         }
 
     except Exception as e:
         return {
-            "error": f"Failed to fetch financial ratios for '{symbol}': {str(e)}",
-            "symbol": symbol.upper(),
+            "error": f"Failed to fetch financial ratios for '{ticker}': {str(e)}",
+            "ticker": ticker.upper(),
         }

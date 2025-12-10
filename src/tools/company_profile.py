@@ -1,65 +1,64 @@
 """
 Tool: get_company_profile
 
-Fetches company profile and basic information from NSE India.
+Fetches company profile and basic information using yfinance.
+Supports both global and Indian markets.
 """
 
-from nsepython import nse_eq
+import yfinance as yf
 
 
-def get_company_profile(symbol: str) -> dict:
+def get_company_profile(ticker: str) -> dict:
     """
-    Get company profile and basic information for an NSE listed company.
+    Get company profile and basic information.
 
     Args:
-        symbol: NSE stock symbol (e.g., 'RELIANCE', 'TCS', 'INFY', 'HDFCBANK')
+        ticker: Stock ticker symbol
+                - US stocks: 'AAPL', 'GOOGL', 'MSFT'
+                - Indian NSE stocks: 'RELIANCE.NS', 'TCS.NS', 'INFY.NS'
 
     Returns:
         Dictionary containing:
-        - symbol: Stock symbol
-        - company_name: Full company name
+        - ticker: Stock symbol
+        - name: Company name
+        - sector: Business sector
         - industry: Industry classification
-        - isin: ISIN code
-        - series: Trading series (EQ, BE, etc.)
-        - face_value: Face value of shares
-        - issued_size: Total issued shares
-        - listing_date: Date of listing
-        - market_lot: Market lot size
-        - is_suspended: Whether trading is suspended
+        - description: Business description
+        - website: Company website
+        - country: Country of headquarters
+        - city: City of headquarters
+        - employees: Number of full-time employees
+        - ceo: CEO name (if available)
     """
     try:
-        quote = nse_eq(symbol.upper())
+        stock = yf.Ticker(ticker)
+        info = stock.info
 
-        if not quote or "error" in quote:
+        if not info or info.get("quoteType") == "NONE":
             return {
-                "error": f"No data found for symbol '{symbol}'. Make sure it's a valid NSE symbol.",
-                "symbol": symbol.upper(),
+                "error": f"No data found for ticker '{ticker}'. Check the symbol.",
+                "ticker": ticker.upper(),
             }
 
-        info = quote.get("info", {})
-        security_info = quote.get("securityInfo", {})
-        metadata = quote.get("metadata", {})
-
         return {
-            "symbol": info.get("symbol", symbol.upper()),
-            "company_name": info.get("companyName"),
+            "ticker": ticker.upper(),
+            "name": info.get("longName") or info.get("shortName"),
+            "sector": info.get("sector"),
             "industry": info.get("industry"),
-            "isin": metadata.get("isin") or info.get("isin"),
-            "series": metadata.get("series"),
-            "face_value": security_info.get("faceValue"),
-            "issued_size": security_info.get("issuedSize"),
-            "listing_date": metadata.get("listingDate"),
-            "market_lot": security_info.get("boardStatus"),
-            "is_suspended": security_info.get("isSuspended", False),
-            "is_slb": security_info.get("slb", False),
-            "class_of_share": security_info.get("classOfShare"),
-            "surveillance": security_info.get("surveillance"),
-            "exchange": "NSE",
+            "description": info.get("longBusinessSummary"),
+            "website": info.get("website"),
+            "country": info.get("country"),
+            "city": info.get("city"),
+            "state": info.get("state"),
+            "employees": info.get("fullTimeEmployees"),
+            "exchange": info.get("exchange"),
+            "currency": info.get("currency"),
+            "quote_type": info.get("quoteType"),
+            "market": info.get("market"),
         }
 
     except Exception as e:
         return {
-            "error": f"Failed to fetch company profile for '{symbol}': {str(e)}",
-            "symbol": symbol.upper(),
+            "error": f"Failed to fetch company profile for '{ticker}': {str(e)}",
+            "ticker": ticker.upper(),
         }
-
