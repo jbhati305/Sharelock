@@ -11,18 +11,13 @@ from .stock_price import get_stock_price
 from .historical_data import get_historical_data
 
 # Company Fundamentals Tools
-from .company_profile import get_company_profile
-from .financial_ratios import get_financial_ratios
-from .shareholding_pattern import get_holders_info
-from .corporate_actions import get_corporate_actions
+from .get_scraped_data import get_scraped_data
 
 __all__ = [
     # Market Data
     "get_stock_price",
     "get_historical_data",
     # Company Fundamentals
-    "get_company_profile",
-    "get_financial_ratios",
-    "get_holders_info",
-    "get_corporate_actions",
+    "get_scraped_data",
 ]
+

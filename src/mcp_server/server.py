@@ -15,10 +15,7 @@ from src.tools import (
     get_stock_price,
     get_historical_data,
     # Company Fundamentals Tools
-    get_company_profile,
-    get_financial_ratios,
-    get_holders_info,
-    get_corporate_actions,
+    get_scraped_data,
 )
 
 # Initialize MCP server
@@ -29,10 +26,8 @@ mcp.tool()(get_stock_price)
 mcp.tool()(get_historical_data)
 
 # Register Company Fundamentals Tools
-mcp.tool()(get_company_profile)
-mcp.tool()(get_financial_ratios)
-mcp.tool()(get_holders_info)
-mcp.tool()(get_corporate_actions)
+mcp.tool()(get_scraped_data)
+
 
 
 def main():
