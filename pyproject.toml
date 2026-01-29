@@ -13,6 +13,10 @@ dependencies = [
     "pypdf>=4.0.0",
     "pdfplumber>=0.11.0",
     "sentence-transformers>=2.2.2",
+    "langgraph>=1.0.7",
+    "langchain>=1.2.7",
+    "langchain-ollama>=1.0.1",
+    "langchain-core>=1.2.7",
 ]
 
 [project.scripts]
